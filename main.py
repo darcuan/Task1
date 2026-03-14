@@ -28,11 +28,14 @@ for i in sent_tokenize(cleaned_text):
     if len(temp) > 1:
         data.append(temp)
 
+# removing "rare" words
 word_counts = Counter(word for sentence in data for word in sentence)
 vocab = [word for word, count in word_counts.items() if count >= 5]
 
+# dive ids to words and words to ids
 word_to_id = {word: i for i, word in enumerate(vocab)}
 id_to_word = {i: word for i, word in enumerate(vocab)}
 
+# clean the data
 new_filtered_data = [[word for word in sentence if word in word_to_id] for sentence in data]
 new_filtered_data = [s for s in new_filtered_data if len(s) > 1]
