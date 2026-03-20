@@ -64,10 +64,10 @@ for sentence in new_filtered_data:
 input_words = np.array(X, dtype=np.int32)
 target_words = np.array(Y, dtype=np.int32)
 
-input_weights = []
-output_weights = []
+input_w = []
+output_w = []
 
-embedding_size = 100
+embedding_size = 50
 
 for i in range(len(vocab)):
     j = 0
@@ -82,7 +82,65 @@ for i in range(len(vocab)):
 
         j += 1
 
-    input_weights.append(word_values_input)
-    output_weights.append(word_values_output)
+    input_w.append(word_values_input)
+    output_w.append(word_values_output)
+
+# transform the lists into numpy arrays for efficiency
+input_weights = np.array(input_w)
+output_weights = np.array(output_w)
+
+# we select the number of times we want to go through the loop
+epochs = 20
+# how much we shift the weights from the two matrices after predictions error
+step_size = 0.01
+
+for epoch in range(epochs):
+    total_loss = 0
+    for i in range(len(input_words)):
+        target_id = input_words[i]
+        context_id = target_words[i]
+        target_word_vector = input_weights[target_id]
+        # doing the dot product of two rows from the two layers to get the similarity
+        score = np.dot(output_weights, target_word_vector)
+
+        # apply softmax function to get the probability of each word
+        # appearing near the given input word
+        expected_score = np.exp(score - np.max(score))
+        y_pred = expected_score / np.sum(expected_score)
+
+        #calculate the error that the model made
+        error = y_pred.copy()
+        error[context_id] -= 1
+
+        # calculate the gradients using the outer product function in numpy
+        output_gradient = np.outer(error, target_word_vector)
+        input_gradient = np.dot(output_weights.T, error)
+
+        output_weights -= step_size * output_gradient
+        input_weights[target_id] -= step_size * input_gradient
+        total_loss -= np.log(y_pred[context_id])
+    print(f"Epoch {epoch + 1}/{epochs}, Loss: {total_loss}")
+
+
+def get_neighbors(target_word, top_n=10):
+    if target_word not in word_to_id:
+        return f"'{target_word}' not in vocabulary."
+
+    target_idx = word_to_id[target_word]
+    v_a = input_weights[target_idx]
+
+    similarities = []
+    for i in range(len(vocab)):
+        v_b = input_weights[i]
+        norm_a = np.linalg.norm(v_a)
+        norm_b = np.linalg.norm(v_b)
+        score1 = np.dot(v_a, v_b) / (norm_a * norm_b)
+        similarities.append((id_to_word[i], score1))
+
+    similarities.sort(key=lambda x: x[1], reverse=True)
+
+    return similarities[1:top_n + 1]
+
+
 
 
